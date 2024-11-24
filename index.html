@@ -35,7 +35,7 @@
   <script type="module">
     // Import necessary functions from Firebase SDK
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-    import { getDatabase, ref, push, onValue, set, remove, onDisconnect, update } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
+    import { getDatabase, ref, push, onValue, set, remove, onDisconnect, update, child, get } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
 
     // Firebase configuration
     const firebaseConfig = {
@@ -83,6 +83,9 @@
       const data = snapshot.val();
       users = Object.keys(data || {}).filter(userKey => data[userKey]?.active && userKey !== userId); // Only active users
 
+      // Clean up users who are inactive
+      cleanUpInactiveUsers();
+
       // Check if users are available
       if (users.length === 0) {
         userStatus.textContent = "Waiting for other users to join...";
@@ -95,6 +98,21 @@
         switchConversation(users[0]);
       }
     });
+
+    // Function to clean up inactive users (remove them from Firebase)
+    function cleanUpInactiveUsers() {
+      onValue(usersRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          for (const userKey in data) {
+            if (data[userKey] && !data[userKey].active) {
+              // Remove the user from the 'users' list if they're inactive
+              remove(ref(database, `users/${userKey}`));
+            }
+          }
+        }
+      });
+    }
 
     // Function to switch conversation
     function switchConversation(partnerId) {
