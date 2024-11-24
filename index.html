@@ -72,12 +72,14 @@
     // Array of active users
     let users = [];
 
-    // Function to create a user once
+    // Function to create a user once (only on first entry)
     function createUser() {
-      const userRef = push(usersRef); // Create user entry (first time only)
-      userId = userRef.key; // Store user ID
-      set(userRef, { id: userId, active: true });
-      onDisconnect(userRef).remove(); // Cleanup on disconnect (removes when user disconnects)
+      if (!userId) {
+        const userRef = push(usersRef); // Create user entry (first time only)
+        userId = userRef.key; // Store user ID
+        set(userRef, { id: userId, active: true });
+        onDisconnect(userRef).remove(); // Cleanup on disconnect (removes when user disconnects)
+      }
     }
 
     // Function to listen for the list of active users
