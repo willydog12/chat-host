@@ -70,7 +70,9 @@
     // Listen for the list of users
     onValue(usersRef, (snapshot) => {
       const data = snapshot.val();
-      users = Object.values(data || {}).filter(user => user !== userId);
+      users = Object.values(data || {}).filter(user => user !== userId);  // Exclude current user from the list
+
+      // Automatically switch to the first available user if no current partner
       if (!currentPartner && users.length > 0) {
         switchConversation(users[0]);
       }
@@ -78,6 +80,8 @@
 
     // Function to switch conversation
     function switchConversation(partnerId) {
+      if (currentPartner === partnerId) return; // Avoid switching to the same person
+
       currentPartner = partnerId;
 
       // Clear previous messages and reset UI
