@@ -8,14 +8,14 @@
 <body>
 
   <!-- Chat Interface -->
-  <div id="messages" style="max-height: 400px; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px"></div>
+  <div id="messages" style="max-height: 400px; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; overflow-y: auto;"></div>
   <input type="text" id="chatInput" placeholder="Type a message">
   <button id="sendBtn">Send</button>
 
   <script type="module">
     // Import necessary functions from Firebase SDKs
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-    import { getDatabase, ref, push, onChildAdded, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js"; 
+    import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js"; 
 
     // Your Firebase configuration
     const firebaseConfig = {
@@ -31,16 +31,17 @@
 
     // Initialize Firebase
     const app = initializeApp(firebaseConfig);
-    const database = getDatabase(app); // Get the Firebase database reference
+    const database = getDatabase(app);
 
-    // Unique user ID (e.g., using a random number or session ID)
+    // Generate a unique user ID for this user
     let userId = `User-${Math.floor(Math.random() * 1000)}`;
 
-    // Conversation partner's ID (can be set dynamically)
+    // Ask the user to enter their partner's user ID
     let partnerId = prompt("Enter partner's user ID:");
 
-    // Firebase reference for this conversation
-    const conversationRef = ref(database, `conversations/${userId}_${partnerId}`);
+    // Create a consistent conversation reference
+    const conversationId = [userId, partnerId].sort().join("_");
+    const conversationRef = ref(database, `conversations/${conversationId}`);
 
     // Get DOM elements
     const messagesDiv = document.getElementById('messages');
