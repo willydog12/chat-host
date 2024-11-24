@@ -60,7 +60,7 @@
 
     // Save current user to the list of users with 'active' flag
     const userRef = push(usersRef);
-    set(userRef, { id: userId, active: true });
+    set(userRef, { id: userId, active: true, lastActive: Date.now() });
 
     // Set up disconnection cleanup (remove user on disconnect)
     onDisconnect(userRef).remove();
@@ -70,6 +70,8 @@
     let currentPartner = null;
     let currentConversationRef = null;
     let currentMessagesListener = null;
+    let inactivityTimeout = null;
+    let activityTimeoutDuration = 5 * 60 * 1000; // 5 minutes of inactivity to mark as inactive
 
     // DOM elements
     const messagesDiv = document.getElementById('messages');
@@ -168,26 +170,27 @@
     // Function to update user activity
     function updateUserActivity() {
       const userRef = ref(database, `users/${userId}`);
-      update(userRef, { active: true });
-    }
-
-    // Function to clean up empty rooms
-    function cleanUpEmptyRooms() {
-      onValue(conversationsRef, (snapshot) => {
-        const conversations = snapshot.val();
-        if (conversations) {
-          for (const conversationId in conversations) {
-            const conversation = conversations[conversationId];
-            if (!conversation || Object.keys(conversation).length === 0) {
-              remove(ref(database, `conversations/${conversationId}`)); // Remove empty conversations
-            }
-          }
-        }
+      update(userRef, { 
+        active: true,
+        lastActive: Date.now()
       });
+      resetInactivityTimeout(); // Reset the inactivity timer
     }
 
-    // Call the cleanup function periodically
-    setInterval(cleanUpEmptyRooms, 60000); // Run every minute
+    // Reset inactivity timeout whenever user interacts
+    function resetInactivityTimeout() {
+      if (inactivityTimeout) {
+        clearTimeout(inactivityTimeout); // Clear the previous timeout
+      }
+
+      inactivityTimeout = setTimeout(() => {
+        // Mark user as inactive after inactivity duration
+        update(ref(database, `users/${userId}`), { active: false });
+      }, activityTimeoutDuration);
+    }
+
+    // Call this function when the page first loads to set up the inactivity listener
+    resetInactivityTimeout();
 
   </script>
 
