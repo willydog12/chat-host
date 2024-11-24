@@ -7,16 +7,17 @@
 </head>
 <body>
   <h1>1-on-1 Chat</h1>
+  
+  <!-- Dropdown to select partner -->
   <label for="partnerSelect">Choose your partner:</label>
   <select id="partnerSelect" style="margin-bottom: 10px;">
     <option value="" disabled selected>Select partner</option>
     <option value="User-123">User-123</option>
     <option value="User-456">User-456</option>
-    <option value="User-789">User-789</option>
-    <!-- Add more users as necessary -->
   </select>
   <button id="startChatBtn">Start Chat</button>
 
+  <!-- Chat Interface -->
   <div id="chatContainer" style="display: none;">
     <div id="messages" style="max-height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;"></div>
     <input type="text" id="chatInput" placeholder="Type a message" style="width: calc(100% - 100px);">
@@ -24,7 +25,7 @@
   </div>
 
   <script type="module">
-    // Import necessary Firebase SDK functions
+    // Import Firebase SDKs
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
     import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
 
@@ -62,42 +63,40 @@
     startChatBtn.addEventListener('click', () => {
       const partnerId = partnerSelect.value;
       if (partnerId) {
-        // Ensure consistent conversation ID
+        // Create a consistent conversation ID
         const conversationId = [userId, partnerId].sort().join("_");
 
         // Set Firebase reference for this conversation
         conversationRef = ref(database, `conversations/${conversationId}`);
 
-        // Show the chat interface
+        // Show chat UI
         chatContainer.style.display = 'block';
 
-        // Load existing messages and listen for new ones
+        // Listen for new messages
         onChildAdded(conversationRef, (snapshot) => {
           const messageData = snapshot.val();
           const messageDiv = document.createElement('div');
           messageDiv.textContent = `${messageData.user}: ${messageData.text}`;
           messagesDiv.appendChild(messageDiv);
 
-          // Auto-scroll to the latest message
+          // Auto-scroll
           messagesDiv.scrollTop = messagesDiv.scrollHeight;
         });
       } else {
-        alert("Please select a partner to start the chat.");
+        alert("Please select a partner to start chatting.");
       }
     });
 
-    // Handle sending new messages
+    // Send a message
     sendBtn.addEventListener('click', () => {
       const messageText = chatInput.value.trim();
       if (messageText && conversationRef) {
-        // Push the new message to Firebase
         push(conversationRef, {
           user: userId,
           text: messageText,
           timestamp: Date.now()
         });
-
-        chatInput.value = ''; // Clear the input field
+        chatInput.value = '';
       }
     });
   </script>
