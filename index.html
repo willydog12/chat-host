@@ -15,6 +15,11 @@
     input, button {
       margin: 5px 0;
     }
+    #userStatus {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #666;
+    }
   </style>
 </head>
 <body>
@@ -25,10 +30,12 @@
   <button id="sendBtn">Send</button>
   <button id="nextBtn">Next Person</button>
 
+  <div id="userStatus"></div> <!-- Status message -->
+
   <script type="module">
     // Import necessary functions from Firebase SDK
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-    import { getDatabase, ref, push, onValue, set, remove } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
+    import { getDatabase, ref, push, onValue, set, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
 
     // Firebase configuration
     const firebaseConfig = {
@@ -55,6 +62,9 @@
     const userRef = push(usersRef);
     set(userRef, userId);
 
+    // Set up disconnection cleanup
+    onDisconnect(userRef).remove();
+
     // Array of users and the current partner
     let users = [];
     let currentPartner = null;
@@ -66,11 +76,18 @@
     const chatInput = document.getElementById('chatInput');
     const sendBtn = document.getElementById('sendBtn');
     const nextBtn = document.getElementById('nextBtn');
+    const userStatus = document.getElementById('userStatus');
 
     // Listen for the list of users
     onValue(usersRef, (snapshot) => {
       const data = snapshot.val();
       users = Object.values(data || {}).filter(user => user !== userId);  // Exclude current user from the list
+
+      if (users.length === 0) {
+        userStatus.textContent = "Waiting for other users to join...";
+      } else {
+        userStatus.textContent = "Ready to chat!";
+      }
 
       // Automatically switch to the first available user if no current partner
       if (!currentPartner && users.length > 0) {
@@ -145,7 +162,7 @@
           for (const conversationId in conversations) {
             const conversation = conversations[conversationId];
             if (!conversation || Object.keys(conversation).length === 0) {
-              remove(ref(database, `conversations/${conversationId}`)); // Remove
+              remove(ref(database, `conversations/${conversationId}`)); // Remove empty conversations
             }
           }
         }
