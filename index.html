@@ -1,14 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Firebase Chat</title>
-
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js"></script>
 </head>
 <body>
 
@@ -17,8 +12,12 @@
   <input type="text" id="chatInput" placeholder="Type a message">
   <button id="sendBtn">Send</button>
 
-  <!-- Firebase and Chat Script -->
-  <script>
+  <!-- Firebase SDKs and Chat Script -->
+  <script type="module">
+    // Import necessary functions from Firebase SDKs
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+    import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js"; 
+
     // Your Firebase configuration
     const firebaseConfig = {
       apiKey: "AIzaSyC0IWMDzxVVxe0S4Cr3bLLAaHSEd4LIgKA",
@@ -32,9 +31,9 @@
     };
 
     // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
-    const chatRef = database.ref('chat'); // Firebase reference to store chat messages
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app); // Get the Firebase database reference
+    const chatRef = ref(database, 'chat'); // Firebase reference for storing messages
 
     // Unique user ID
     let userId = `User-${Math.floor(Math.random() * 1000)}`;
@@ -45,7 +44,7 @@
     const sendBtn = document.getElementById('sendBtn');
 
     // Listen for new messages in Firebase and display them
-    chatRef.on('child_added', (snapshot) => {
+    onChildAdded(chatRef, (snapshot) => {
       const messageData = snapshot.val();
       const messageDiv = document.createElement('div');
       messageDiv.textContent = `${messageData.user}: ${messageData.text}`;
@@ -60,7 +59,7 @@
       const messageText = chatInput.value.trim();
       if (messageText) {
         // Push the new message to Firebase Realtime Database
-        chatRef.push({
+        push(chatRef, {
           user: userId,
           text: messageText
         });
