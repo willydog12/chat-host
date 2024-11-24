@@ -186,7 +186,23 @@
       inactivityTimeout = setTimeout(() => {
         // Mark user as inactive after inactivity duration
         update(ref(database, `users/${userId}`), { active: false });
+        checkUserActivity();  // Call the function to check for inactivity
       }, activityTimeoutDuration);
+    }
+
+    // Check user activity (to handle incorrect status)
+    function checkUserActivity() {
+      const userRef = ref(database, `users/${userId}`);
+      onValue(userRef, (snapshot) => {
+        const userData = snapshot.val();
+        if (userData) {
+          // If the last activity timestamp is older than the timeout, mark as inactive
+          const now = Date.now();
+          if (now - userData.lastActive > activityTimeoutDuration) {
+            update(userRef, { active: false });
+          }
+        }
+      });
     }
 
     // Call this function when the page first loads to set up the inactivity listener
