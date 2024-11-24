@@ -30,7 +30,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
     import { getDatabase, ref, push, onValue, set, remove } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
 
-    // Your Firebase configuration
+    // Firebase configuration
     const firebaseConfig = {
       apiKey: "AIzaSyC0IWMDzxVVxe0S4Cr3bLLAaHSEd4LIgKA",
       authDomain: "chat-23-nov.firebaseapp.com",
@@ -51,11 +51,11 @@
     const usersRef = ref(database, 'users');
     const conversationsRef = ref(database, 'conversations');
 
-    // Save the current user to the list of users
+    // Save current user to the list of users
     const userRef = push(usersRef);
     set(userRef, userId);
 
-    // Array of other users and current partner
+    // Array of users and the current partner
     let users = [];
     let currentPartner = null;
     let currentConversationRef = null;
@@ -87,7 +87,7 @@
       // Clear previous messages and reset UI
       messagesDiv.innerHTML = '';
 
-      // Create a unique conversation ID
+      // Create a unique conversation ID (order user IDs alphabetically to prevent duplicates)
       const conversationId = userId < partnerId
         ? `${userId}_${partnerId}`
         : `${partnerId}_${userId}`;
@@ -145,15 +145,15 @@
           for (const conversationId in conversations) {
             const conversation = conversations[conversationId];
             if (!conversation || Object.keys(conversation).length === 0) {
-              remove(ref(database, `conversations/${conversationId}`)); // Remove empty room
+              remove(ref(database, `conversations/${conversationId}`)); // Remove
             }
           }
         }
       });
     }
 
-    // Call cleanup periodically
-    setInterval(cleanUpEmptyRooms, 60000); // Clean up every minute
+    // Call the cleanup function periodically
+    setInterval(cleanUpEmptyRooms, 60000); // Run every minute
   </script>
 
 </body>
