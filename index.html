@@ -62,7 +62,7 @@
     const userRef = push(usersRef);
     set(userRef, userId);
 
-    // Set up disconnection cleanup
+    // Set up disconnection cleanup (remove user on disconnect)
     onDisconnect(userRef).remove();
 
     // Array of users and the current partner
