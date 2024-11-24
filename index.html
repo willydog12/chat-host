@@ -78,7 +78,7 @@
     const nextBtn = document.getElementById('nextBtn');
     const userStatus = document.getElementById('userStatus');
 
-    // Listen for the list of users
+    // Listen for the list of users and filter only active ones
     onValue(usersRef, (snapshot) => {
       const data = snapshot.val();
       users = Object.keys(data || {}).filter(userKey => data[userKey] !== null && userKey !== userId); // Exclude disconnected users and current user
