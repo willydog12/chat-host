@@ -28,7 +28,7 @@
   <script type="module">
     // Import necessary functions from Firebase SDK
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-    import { getDatabase, ref, push, onChildAdded, onValue, get } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
+    import { getDatabase, ref, push, onValue, set } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
 
     // Your Firebase configuration
     const firebaseConfig = {
@@ -46,19 +46,18 @@
     const app = initializeApp(firebaseConfig);
     const database = getDatabase(app);
 
-    // Unique user ID
-    const userId = prompt("Enter your User ID:");
-
-    // Firebase reference to track all users
+    // Generate a unique ID for this user
+    const userId = `User-${Math.floor(Math.random() * 10000)}`;
     const usersRef = ref(database, 'users');
     const conversationsRef = ref(database, 'conversations');
 
-    // Save this user to the list of users
-    push(usersRef, userId);
+    // Save the current user to the list of users
+    const userRef = push(usersRef);
+    set(userRef, userId);
 
-    // Array of users and current partner index
+    // Array of other users and current partner
     let users = [];
-    let currentPartnerIndex = 0;
+    let currentPartner = null;
     let currentConversationRef = null;
 
     // DOM elements
@@ -67,36 +66,44 @@
     const sendBtn = document.getElementById('sendBtn');
     const nextBtn = document.getElementById('nextBtn');
 
-    // Load users from Firebase
+    // Listen for the list of users
     onValue(usersRef, (snapshot) => {
-      users = Object.values(snapshot.val() || {}).filter(user => user !== userId);
-      if (users.length > 0 && currentConversationRef === null) {
-        switchConversation(users[currentPartnerIndex]);
+      const data = snapshot.val();
+      users = Object.values(data || {}).filter(user => user !== userId);
+      if (!currentPartner && users.length > 0) {
+        switchConversation(users[0]);
       }
     });
 
     // Function to switch conversation
     function switchConversation(partnerId) {
-      // Clear previous messages
+      currentPartner = partnerId;
+
+      // Clear previous messages and reset UI
       messagesDiv.innerHTML = '';
 
-      // Determine the conversation ID
+      // Create a unique conversation ID
       const conversationId = userId < partnerId 
         ? `${userId}_${partnerId}` 
         : `${partnerId}_${userId}`;
 
-      // Set the new conversation reference
+      // Update the conversation reference
       currentConversationRef = ref(database, `conversations/${conversationId}`);
 
-      // Listen for new messages in this conversation
-      onChildAdded(currentConversationRef, (snapshot) => {
-        const messageData = snapshot.val();
-        const messageDiv = document.createElement('div');
-        messageDiv.textContent = `${messageData.user}: ${messageData.text}`;
-        messagesDiv.appendChild(messageDiv);
+      // Remove previous listener (to prevent duplicates)
+      onValue(currentConversationRef, () => {}); // Detach previous listener
 
-        // Auto-scroll to the latest message
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      // Listen for new messages
+      onValue(currentConversationRef, (snapshot) => {
+        const messages = snapshot.val();
+        messagesDiv.innerHTML = '';
+        for (const key in messages) {
+          const message = messages[key];
+          const messageDiv = document.createElement('div');
+          messageDiv.textContent = `${message.user}: ${message.text}`;
+          messagesDiv.appendChild(messageDiv);
+        }
+        messagesDiv.scrollTop = messagesDiv.scrollHeight; // Scroll to latest
       });
     }
 
@@ -104,7 +111,6 @@
     sendBtn.addEventListener('click', () => {
       const messageText = chatInput.value.trim();
       if (messageText && currentConversationRef) {
-        // Push the message to the current conversation
         push(currentConversationRef, {
           user: userId,
           text: messageText,
@@ -117,10 +123,10 @@
     // Handle switching to the next person
     nextBtn.addEventListener('click', () => {
       if (users.length > 0) {
-        currentPartnerIndex = (currentPartnerIndex + 1) % users.length;
-        switchConversation(users[currentPartnerIndex]);
+        const nextIndex = (users.indexOf(currentPartner) + 1) % users.length;
+        switchConversation(users[nextIndex]);
       } else {
-        alert('No other users are available to chat.');
+        alert('No other users are available.');
       }
     });
   </script>
