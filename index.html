@@ -81,20 +81,18 @@
     // Listen for the list of users
     onValue(usersRef, (snapshot) => {
       const data = snapshot.val();
-      users = Object.values(data || {}).filter(user => user !== userId);  // Exclude current user from the list
+      users = Object.keys(data || {}).filter(userKey => data[userKey] !== null && userKey !== userId); // Exclude disconnected users and current user
 
-      // Check for active users
-      const activeUsers = users.filter(user => user !== null); // Only include users who are connected
-
-      if (activeUsers.length === 0) {
+      // Check if users are available
+      if (users.length === 0) {
         userStatus.textContent = "Waiting for other users to join...";
       } else {
         userStatus.textContent = "Ready to chat!";
       }
 
       // Automatically switch to the first available user if no current partner
-      if (!currentPartner && activeUsers.length > 0) {
-        switchConversation(activeUsers[0]);
+      if (!currentPartner && users.length > 0) {
+        switchConversation(users[0]);
       }
     });
 
@@ -149,10 +147,11 @@
 
     // Handle switching to the next person
     nextBtn.addEventListener('click', () => {
-      // Filter active users (exclude disconnected ones)
-      const activeUsers = users.filter(user => user !== userId && user !== null);
+      // Filter out the current partner from the active users list
+      const activeUsers = users.filter(user => user !== currentPartner);
 
       if (activeUsers.length > 0) {
+        // Get the next user
         const nextIndex = (activeUsers.indexOf(currentPartner) + 1) % activeUsers.length;
         switchConversation(activeUsers[nextIndex]);
       } else {
@@ -178,10 +177,6 @@
     // Call the cleanup function periodically
     setInterval(cleanUpEmptyRooms, 60000); // Run every minute
 
-    // Explicit cleanup of disconnected users after page reload
-    window.addEventListener('beforeunload', () => {
-      remove(userRef);  // Explicitly remove user on page unload
-    });
   </script>
 
 </body>
