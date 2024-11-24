@@ -56,18 +56,11 @@
     // Reference to the users in the database
     const usersRef = ref(database, 'users');
 
-    // Generate a unique userId (use the push key)
-    const userRef = push(usersRef);
-    const userId = userRef.key; // Firebase automatically generates a unique ID
+    // User ID (use the push key to generate unique ID)
+    let userId = null;
     let currentPartner = null;
     let currentConversationRef = null;
     let currentMessagesListener = null;
-
-    // Save the user data to the database (create user on join)
-    set(userRef, { id: userId, active: true });
-
-    // Setup user disconnection to clean up when they leave
-    onDisconnect(userRef).remove();
 
     // DOM elements
     const messagesDiv = document.getElementById('messages');
@@ -79,23 +72,33 @@
     // Array of active users
     let users = [];
 
-    // Listen for the list of active users
-    onValue(usersRef, (snapshot) => {
-      const data = snapshot.val();
-      users = Object.keys(data || {}).filter(userKey => data[userKey]?.active && userKey !== userId);
+    // Function to create a user once
+    function createUser() {
+      const userRef = push(usersRef); // Create user entry (first time only)
+      userId = userRef.key; // Store user ID
+      set(userRef, { id: userId, active: true });
+      onDisconnect(userRef).remove(); // Cleanup on disconnect
+    }
 
-      // If no active users are available, inform the user
-      if (users.length === 0) {
-        userStatus.textContent = "Waiting for other users to join...";
-      } else {
-        userStatus.textContent = "Ready to chat!";
-      }
+    // Function to listen for the list of active users
+    function listenForActiveUsers() {
+      onValue(usersRef, (snapshot) => {
+        const data = snapshot.val();
+        users = Object.keys(data || {}).filter(userKey => data[userKey]?.active && userKey !== userId);
 
-      // Automatically connect to the first available user
-      if (!currentPartner && users.length > 0) {
-        switchConversation(users[0]);
-      }
-    });
+        // If no active users are available, inform the user
+        if (users.length === 0) {
+          userStatus.textContent = "Waiting for other users to join...";
+        } else {
+          userStatus.textContent = "Ready to chat!";
+        }
+
+        // Automatically connect to the first available user
+        if (!currentPartner && users.length > 0) {
+          switchConversation(users[0]);
+        }
+      });
+    }
 
     // Function to switch to a new conversation with a partner
     function switchConversation(partnerId) {
@@ -127,8 +130,8 @@
       });
     }
 
-    // Handle sending a message
-    sendBtn.addEventListener('click', () => {
+    // Function to send a message (update conversation without creating a new user)
+    function sendMessage() {
       const messageText = chatInput.value.trim();
       if (messageText && currentConversationRef) {
         push(currentConversationRef, {
@@ -138,11 +141,10 @@
         });
         chatInput.value = ''; // Clear input field
       }
-    });
+    }
 
-    // Handle switching to the next person
-    nextBtn.addEventListener('click', () => {
-      // Filter out the current partner from the active users list
+    // Function to handle switching to the next person
+    function nextPerson() {
       const activeUsers = users.filter(user => user !== currentPartner);
 
       if (activeUsers.length > 0) {
@@ -152,7 +154,20 @@
       } else {
         alert('No other users are available.');
       }
-    });
+    }
+
+    // Initialize the app by creating the user if needed and starting to listen for active users
+    function initialize() {
+      createUser(); // Create user once when joining
+      listenForActiveUsers(); // Listen for active users
+    }
+
+    // Event listeners for sending messages and switching users
+    sendBtn.addEventListener('click', sendMessage);
+    nextBtn.addEventListener('click', nextPerson);
+
+    // Start the application
+    initialize();
 
   </script>
 
