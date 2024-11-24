@@ -77,7 +77,7 @@
       if (!userId) {
         const userRef = push(usersRef); // Create user entry (first time only)
         userId = userRef.key; // Store user ID
-        set(userRef, { id: userId, active: true });
+        set(userRef, { id: userId, active: true }); // Set the user as active
         onDisconnect(userRef).remove(); // Cleanup on disconnect (removes when user disconnects)
       }
     }
