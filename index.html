@@ -35,7 +35,7 @@
   <script type="module">
     // Import necessary functions from Firebase SDK
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-    import { getDatabase, ref, push, onValue, set, remove, onDisconnect, update, query, orderByChild, limitToFirst } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
+    import { getDatabase, ref, push, onValue, set, remove, onDisconnect, update } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
 
     // Firebase configuration
     const firebaseConfig = {
@@ -53,14 +53,14 @@
     const app = initializeApp(firebaseConfig);
     const database = getDatabase(app);
 
-    // Generate a unique ID for this user (use the push key as the user ID)
+    // Generate a unique ID for this user
     const userId = `User-${Math.floor(Math.random() * 10000)}`;
     const usersRef = ref(database, 'users');
     const conversationsRef = ref(database, 'conversations');
 
     // Save current user to the list of users with 'active' flag
     const userRef = push(usersRef);
-    set(userRef, { id: userId, active: true, lastActive: Date.now() });
+    set(userRef, { id: userId, active: true });
 
     // Set up disconnection cleanup (remove user on disconnect)
     onDisconnect(userRef).remove();
@@ -70,8 +70,6 @@
     let currentPartner = null;
     let currentConversationRef = null;
     let currentMessagesListener = null;
-    let inactivityTimeout = null;
-    let activityTimeoutDuration = 5 * 60 * 1000; // 5 minutes of inactivity to mark as inactive
 
     // DOM elements
     const messagesDiv = document.getElementById('messages');
@@ -80,27 +78,10 @@
     const nextBtn = document.getElementById('nextBtn');
     const userStatus = document.getElementById('userStatus');
 
-    // Function to clean up phantom users who aren't active
-    function cleanupPhantomUsers() {
-      onValue(usersRef, (snapshot) => {
-        const data = snapshot.val();
-        for (const userKey in data) {
-          const user = data[userKey];
-          // Consider a user phantom if they are inactive or have never sent a message
-          if (userKey !== userId && (!user.active || Date.now() - user.lastActive > activityTimeoutDuration)) {
-            remove(ref(database, `users/${userKey}`)); // Remove inactive or phantom users
-          }
-        }
-      });
-    }
-
     // Listen for the list of users and filter only active ones
     onValue(usersRef, (snapshot) => {
       const data = snapshot.val();
-      // Filter out inactive users and yourself
-      users = Object.keys(data || {}).filter(userKey => 
-        data[userKey]?.active && userKey !== userId
-      );
+      users = Object.keys(data || {}).filter(userKey => data[userKey]?.active && userKey !== userId); // Only active users
 
       // Check if users are available
       if (users.length === 0) {
@@ -113,8 +94,6 @@
       if (!currentPartner && users.length > 0) {
         switchConversation(users[0]);
       }
-
-      cleanupPhantomUsers(); // Clean up phantom users who aren't interacting
     });
 
     // Function to switch conversation
@@ -169,40 +148,43 @@
 
     // Handle switching to the next person
     nextBtn.addEventListener('click', () => {
-      // If no partner exists, set to the first available user
-      if (!currentPartner && users.length > 0) {
-        switchConversation(users[0]);
-      } else {
-        // Filter out the current partner from the active users list
-        const activeUsers = users.filter(user => user !== currentPartner);
+      // Filter out the current partner from the active users list
+      const activeUsers = users.filter(user => user !== currentPartner);
 
-        if (activeUsers.length > 0) {
-          // Get the next user
-          const nextIndex = (activeUsers.indexOf(currentPartner) + 1) % activeUsers.length;
-          switchConversation(activeUsers[nextIndex]);
-        } else {
-          alert('No other users are available.');
-        }
+      if (activeUsers.length > 0) {
+        // Get the next user
+        const nextIndex = (activeUsers.indexOf(currentPartner) + 1) % activeUsers.length;
+        switchConversation(activeUsers[nextIndex]);
+      } else {
+        alert('No other users are available.');
       }
     });
 
     // Function to update user activity
     function updateUserActivity() {
       const userRef = ref(database, `users/${userId}`);
-      update(userRef, { 
-        active: true,
-        lastActive: Date.now()
-      });
-
-      // Reset inactivity timer
-      clearTimeout(inactivityTimeout);
-      inactivityTimeout = setTimeout(() => {
-        set(userRef, { active: false }); // Mark user as inactive after timeout
-      }, activityTimeoutDuration);
+      update(userRef, { active: true });
     }
 
-    // Start by checking for other users and handle initial state
-    updateUserActivity();
+    // Function to clean up empty rooms
+    function cleanUpEmptyRooms() {
+      onValue(conversationsRef, (snapshot) => {
+        const conversations = snapshot.val();
+        if (conversations) {
+          for (const conversationId in conversations) {
+            const conversation = conversations[conversationId];
+            if (!conversation || Object.keys(conversation).length === 0) {
+              remove(ref(database, `conversations/${conversationId}`)); // Remove empty conversations
+            }
+          }
+        }
+      });
+    }
+
+    // Call the cleanup function periodically
+    setInterval(cleanUpEmptyRooms, 60000); // Run every minute
+
   </script>
+
 </body>
 </html>
