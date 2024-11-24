@@ -148,15 +148,20 @@
 
     // Handle switching to the next person
     nextBtn.addEventListener('click', () => {
-      // Filter out the current partner from the active users list
-      const activeUsers = users.filter(user => user !== currentPartner);
-
-      if (activeUsers.length > 0) {
-        // Get the next user
-        const nextIndex = (activeUsers.indexOf(currentPartner) + 1) % activeUsers.length;
-        switchConversation(activeUsers[nextIndex]);
+      // If no partner exists, set to the first available user
+      if (!currentPartner && users.length > 0) {
+        switchConversation(users[0]);
       } else {
-        alert('No other users are available.');
+        // Filter out the current partner from the active users list
+        const activeUsers = users.filter(user => user !== currentPartner);
+
+        if (activeUsers.length > 0) {
+          // Get the next user
+          const nextIndex = (activeUsers.indexOf(currentPartner) + 1) % activeUsers.length;
+          switchConversation(activeUsers[nextIndex]);
+        } else {
+          alert('No other users are available.');
+        }
       }
     });
 
