@@ -53,7 +53,7 @@
     const app = initializeApp(firebaseConfig);
     const database = getDatabase(app);
 
-    // Generate a unique ID for this user
+    // Generate a unique ID for this user (use the push key as the user ID)
     const userId = `User-${Math.floor(Math.random() * 10000)}`;
     const usersRef = ref(database, 'users');
     const conversationsRef = ref(database, 'conversations');
@@ -83,7 +83,10 @@
     // Listen for the list of users and filter only active ones
     onValue(usersRef, (snapshot) => {
       const data = snapshot.val();
-      users = Object.keys(data || {}).filter(userKey => data[userKey]?.active && userKey !== userId); // Only active users
+      // Filter out inactive users and yourself
+      users = Object.keys(data || {}).filter(userKey => 
+        data[userKey]?.active && userKey !== userId
+      );
 
       // Check if users are available
       if (users.length === 0) {
@@ -185,30 +188,14 @@
 
       inactivityTimeout = setTimeout(() => {
         // Mark user as inactive after inactivity duration
-        update(ref(database, `users/${userId}`), { active: false });
-        checkUserActivity();  // Call the function to check for inactivity
+        update(ref(database, `users/${userId}`), {
+          active: false
+        });
       }, activityTimeoutDuration);
     }
 
-    // Check user activity (to handle incorrect status)
-    function checkUserActivity() {
-      const userRef = ref(database, `users/${userId}`);
-      onValue(userRef, (snapshot) => {
-        const userData = snapshot.val();
-        if (userData) {
-          // If the last activity timestamp is older than the timeout, mark as inactive
-          const now = Date.now();
-          if (now - userData.lastActive > activityTimeoutDuration) {
-            update(userRef, { active: false });
-          }
-        }
-      });
-    }
-
-    // Call this function when the page first loads to set up the inactivity listener
-    resetInactivityTimeout();
-
+    // Start by checking for other users
+    updateUserActivity();
   </script>
-
 </body>
 </html>
