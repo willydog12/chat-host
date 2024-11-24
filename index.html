@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>1-on-1 Chat</title>
+  <title>1-on-1 Chat with Next Person</title>
   <style>
     #messages {
       max-height: 400px;
@@ -19,15 +19,16 @@
 </head>
 <body>
 
-  <h1>1-on-1 Chat</h1>
+  <h1>1-on-1 Chat with Next Person</h1>
   <div id="messages"></div>
   <input type="text" id="chatInput" placeholder="Type a message">
   <button id="sendBtn">Send</button>
+  <button id="nextBtn">Next Person</button>
 
   <script type="module">
     // Import necessary functions from Firebase SDK
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-    import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
+    import { getDatabase, ref, push, onChildAdded, onValue, get } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
 
     // Your Firebase configuration
     const firebaseConfig = {
@@ -45,45 +46,81 @@
     const app = initializeApp(firebaseConfig);
     const database = getDatabase(app);
 
-    // Unique user IDs
+    // Unique user ID
     const userId = prompt("Enter your User ID:");
-    const partnerId = prompt("Enter your Partner's User ID:");
 
-    // Generate a consistent conversation ID
-    const conversationId = userId < partnerId 
-      ? `${userId}_${partnerId}` 
-      : `${partnerId}_${userId}`;
+    // Firebase reference to track all users
+    const usersRef = ref(database, 'users');
+    const conversationsRef = ref(database, 'conversations');
 
-    // Reference for the current conversation
-    const conversationRef = ref(database, `conversations/${conversationId}`);
+    // Save this user to the list of users
+    push(usersRef, userId);
+
+    // Array of users and current partner index
+    let users = [];
+    let currentPartnerIndex = 0;
+    let currentConversationRef = null;
 
     // DOM elements
     const messagesDiv = document.getElementById('messages');
     const chatInput = document.getElementById('chatInput');
     const sendBtn = document.getElementById('sendBtn');
+    const nextBtn = document.getElementById('nextBtn');
 
-    // Listen for new messages in the conversation
-    onChildAdded(conversationRef, (snapshot) => {
-      const messageData = snapshot.val();
-      const messageDiv = document.createElement('div');
-      messageDiv.textContent = `${messageData.user}: ${messageData.text}`;
-      messagesDiv.appendChild(messageDiv);
-
-      // Auto-scroll to the latest message
-      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    // Load users from Firebase
+    onValue(usersRef, (snapshot) => {
+      users = Object.values(snapshot.val() || {}).filter(user => user !== userId);
+      if (users.length > 0 && currentConversationRef === null) {
+        switchConversation(users[currentPartnerIndex]);
+      }
     });
 
-    // Handle sending a new message
+    // Function to switch conversation
+    function switchConversation(partnerId) {
+      // Clear previous messages
+      messagesDiv.innerHTML = '';
+
+      // Determine the conversation ID
+      const conversationId = userId < partnerId 
+        ? `${userId}_${partnerId}` 
+        : `${partnerId}_${userId}`;
+
+      // Set the new conversation reference
+      currentConversationRef = ref(database, `conversations/${conversationId}`);
+
+      // Listen for new messages in this conversation
+      onChildAdded(currentConversationRef, (snapshot) => {
+        const messageData = snapshot.val();
+        const messageDiv = document.createElement('div');
+        messageDiv.textContent = `${messageData.user}: ${messageData.text}`;
+        messagesDiv.appendChild(messageDiv);
+
+        // Auto-scroll to the latest message
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      });
+    }
+
+    // Handle sending a message
     sendBtn.addEventListener('click', () => {
       const messageText = chatInput.value.trim();
-      if (messageText) {
-        // Push the new message to Firebase
-        push(conversationRef, {
+      if (messageText && currentConversationRef) {
+        // Push the message to the current conversation
+        push(currentConversationRef, {
           user: userId,
           text: messageText,
           timestamp: Date.now()
         });
         chatInput.value = ''; // Clear input field
+      }
+    });
+
+    // Handle switching to the next person
+    nextBtn.addEventListener('click', () => {
+      if (users.length > 0) {
+        currentPartnerIndex = (currentPartnerIndex + 1) % users.length;
+        switchConversation(users[currentPartnerIndex]);
+      } else {
+        alert('No other users are available to chat.');
       }
     });
   </script>
