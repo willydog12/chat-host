@@ -35,7 +35,7 @@
   <script type="module">
     // Import necessary functions from Firebase SDK
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-    import { getDatabase, ref, push, onValue, set, remove, onDisconnect, update } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
+    import { getDatabase, ref, push, onValue, set, remove, onDisconnect, update, query, orderByChild, limitToFirst } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
 
     // Firebase configuration
     const firebaseConfig = {
@@ -86,6 +86,7 @@
         const data = snapshot.val();
         for (const userKey in data) {
           const user = data[userKey];
+          // Consider a user phantom if they are inactive or have never sent a message
           if (userKey !== userId && (!user.active || Date.now() - user.lastActive > activityTimeoutDuration)) {
             remove(ref(database, `users/${userKey}`)); // Remove inactive or phantom users
           }
@@ -192,18 +193,11 @@
         active: true,
         lastActive: Date.now()
       });
-      resetInactivityTimeout(); // Reset the inactivity timer
-    }
 
-    // Reset inactivity timer
-    function resetInactivityTimeout() {
-      if (inactivityTimeout) {
-        clearTimeout(inactivityTimeout);
-      }
+      // Reset inactivity timer
+      clearTimeout(inactivityTimeout);
       inactivityTimeout = setTimeout(() => {
-        update(ref(database, `users/${userId}`), {
-          active: false
-        });
+        set(userRef, { active: false }); // Mark user as inactive after timeout
       }, activityTimeoutDuration);
     }
 
