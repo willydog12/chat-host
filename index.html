@@ -83,15 +83,16 @@
       const data = snapshot.val();
       users = Object.values(data || {}).filter(user => user !== userId);  // Exclude current user from the list
 
+      // Automatically switch to the first available user if no current partner
+      if (!currentPartner && users.length > 0) {
+        switchConversation(users[0]);
+      }
+
+      // Handle user status display
       if (users.length === 0) {
         userStatus.textContent = "Waiting for other users to join...";
       } else {
         userStatus.textContent = "Ready to chat!";
-      }
-
-      // Automatically switch to the first available user if no current partner
-      if (!currentPartner && users.length > 0) {
-        switchConversation(users[0]);
       }
     });
 
@@ -171,6 +172,11 @@
 
     // Call the cleanup function periodically
     setInterval(cleanUpEmptyRooms, 60000); // Run every minute
+
+    // Explicit cleanup of disconnected users after page reload
+    window.addEventListener('beforeunload', () => {
+      remove(userRef);  // Explicitly remove user on page unload
+    });
   </script>
 
 </body>
