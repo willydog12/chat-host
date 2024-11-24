@@ -1,3 +1,7 @@
+// Import the necessary Firebase functions
+const { initializeApp } = firebase;
+const { getDatabase, ref, child, push, onChildAdded } = firebase.database;
+
 // Your Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyC0IWMDzxVVxe0S4Cr3bLLAaHSEd4LIgKA",
@@ -11,9 +15,9 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const database = firebase.database();
-const chatRef = database.ref('chat'); // Firebase reference to store chat messages
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
+const chatRef = ref(database, 'chat'); // Firebase reference to store chat messages
 
 // Unique user ID
 let userId = `User-${Math.floor(Math.random() * 1000)}`;
@@ -24,7 +28,7 @@ const chatInput = document.getElementById('chatInput');
 const sendBtn = document.getElementById('sendBtn');
 
 // Listen for new messages in Firebase and display them
-chatRef.on('child_added', (snapshot) => {
+onChildAdded(chatRef, (snapshot) => {
   const messageData = snapshot.val();
   const messageDiv = document.createElement('div');
   messageDiv.textContent = `${messageData.user}: ${messageData.text}`;
@@ -39,7 +43,7 @@ sendBtn.addEventListener('click', () => {
   const messageText = chatInput.value.trim();
   if (messageText) {
     // Push the new message to Firebase Realtime Database
-    chatRef.push({
+    push(chatRef, {
       user: userId,
       text: messageText
     });
