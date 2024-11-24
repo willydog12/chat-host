@@ -28,7 +28,7 @@
   <script type="module">
     // Import necessary functions from Firebase SDK
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-    import { getDatabase, ref, push, onValue, set } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
+    import { getDatabase, ref, push, onValue, set, remove } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
 
     // Your Firebase configuration
     const firebaseConfig = {
@@ -59,6 +59,7 @@
     let users = [];
     let currentPartner = null;
     let currentConversationRef = null;
+    let currentMessagesListener = null;
 
     // DOM elements
     const messagesDiv = document.getElementById('messages');
@@ -83,20 +84,22 @@
       messagesDiv.innerHTML = '';
 
       // Create a unique conversation ID
-      const conversationId = userId < partnerId 
-        ? `${userId}_${partnerId}` 
+      const conversationId = userId < partnerId
+        ? `${userId}_${partnerId}`
         : `${partnerId}_${userId}`;
 
       // Update the conversation reference
       currentConversationRef = ref(database, `conversations/${conversationId}`);
 
-      // Remove previous listener (to prevent duplicates)
-      onValue(currentConversationRef, () => {}); // Detach previous listener
+      // Clean up previous message listener
+      if (currentMessagesListener) {
+        currentMessagesListener(); // Detach previous listener
+      }
 
-      // Listen for new messages
-      onValue(currentConversationRef, (snapshot) => {
+      // Listen for new messages in the conversation
+      currentMessagesListener = onValue(currentConversationRef, (snapshot) => {
         const messages = snapshot.val();
-        messagesDiv.innerHTML = '';
+        messagesDiv.innerHTML = ''; // Clear previous messages
         for (const key in messages) {
           const message = messages[key];
           const messageDiv = document.createElement('div');
@@ -129,6 +132,24 @@
         alert('No other users are available.');
       }
     });
+
+    // Function to clean up empty rooms
+    function cleanUpEmptyRooms() {
+      onValue(conversationsRef, (snapshot) => {
+        const conversations = snapshot.val();
+        if (conversations) {
+          for (const conversationId in conversations) {
+            const conversation = conversations[conversationId];
+            if (!conversation || Object.keys(conversation).length === 0) {
+              remove(ref(database, `conversations/${conversationId}`)); // Remove empty room
+            }
+          }
+        }
+      });
+    }
+
+    // Call cleanup periodically
+    setInterval(cleanUpEmptyRooms, 60000); // Clean up every minute
   </script>
 
 </body>
