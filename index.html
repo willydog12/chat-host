@@ -77,7 +77,7 @@
       const userRef = push(usersRef); // Create user entry (first time only)
       userId = userRef.key; // Store user ID
       set(userRef, { id: userId, active: true });
-      onDisconnect(userRef).remove(); // Cleanup on disconnect
+      onDisconnect(userRef).remove(); // Cleanup on disconnect (removes when user disconnects)
     }
 
     // Function to listen for the list of active users
