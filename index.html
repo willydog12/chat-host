@@ -35,7 +35,7 @@
   <script type="module">
     // Import necessary functions from Firebase SDK
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-    import { getDatabase, ref, push, onValue, set, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
+    import { getDatabase, ref, push, onValue, set, remove, onDisconnect, update } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
 
     // Firebase configuration
     const firebaseConfig = {
@@ -58,9 +58,9 @@
     const usersRef = ref(database, 'users');
     const conversationsRef = ref(database, 'conversations');
 
-    // Save current user to the list of users
+    // Save current user to the list of users with 'active' flag
     const userRef = push(usersRef);
-    set(userRef, userId);
+    set(userRef, { id: userId, active: true });
 
     // Set up disconnection cleanup (remove user on disconnect)
     onDisconnect(userRef).remove();
@@ -81,7 +81,7 @@
     // Listen for the list of users and filter only active ones
     onValue(usersRef, (snapshot) => {
       const data = snapshot.val();
-      users = Object.keys(data || {}).filter(userKey => data[userKey] !== null && userKey !== userId); // Exclude disconnected users and current user
+      users = Object.keys(data || {}).filter(userKey => data[userKey]?.active && userKey !== userId); // Only active users
 
       // Check if users are available
       if (users.length === 0) {
@@ -142,6 +142,7 @@
           timestamp: Date.now()
         });
         chatInput.value = ''; // Clear input field
+        updateUserActivity(); // Update activity timestamp
       }
     });
 
@@ -158,6 +159,12 @@
         alert('No other users are available.');
       }
     });
+
+    // Function to update user activity
+    function updateUserActivity() {
+      const userRef = ref(database, `users/${userId}`);
+      update(userRef, { active: true });
+    }
 
     // Function to clean up empty rooms
     function cleanUpEmptyRooms() {
