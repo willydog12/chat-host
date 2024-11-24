@@ -12,12 +12,11 @@
   <input type="text" id="chatInput" placeholder="Type a message">
   <button id="sendBtn">Send</button>
 
-  <!-- Firebase SDKs and Chat Script -->
-  <script type="module">
-    // Import the functions you need from the SDKs you need
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-    import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js"; 
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js"></script>
 
+  <script>
     // Your Firebase configuration
     const firebaseConfig = {
       apiKey: "AIzaSyC0IWMDzxVVxe0S4Cr3bLLAaHSEd4LIgKA",
@@ -31,9 +30,9 @@
     };
 
     // Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    const database = getDatabase(app); // Get the Firebase database
-    const chatRef = ref(database, 'chat'); // Firebase reference for storing messages
+    const app = firebase.initializeApp(firebaseConfig);
+    const database = firebase.database(); // Get the Firebase database
+    const chatRef = database.ref('chat'); // Firebase reference for storing messages
 
     // Unique user ID (this can be any value, for example, a random number)
     let userId = `User-${Math.floor(Math.random() * 1000)}`;
@@ -44,7 +43,7 @@
     const sendBtn = document.getElementById('sendBtn');
 
     // Listen for new messages in Firebase and display them
-    onChildAdded(chatRef, (snapshot) => {
+    chatRef.on('child_added', (snapshot) => {
       const messageData = snapshot.val();
       const messageDiv = document.createElement('div');
       messageDiv.textContent = `${messageData.user}: ${messageData.text}`;
@@ -59,7 +58,7 @@
       const messageText = chatInput.value.trim();
       if (messageText) {
         // Push the new message to Firebase Realtime Database
-        push(chatRef, {
+        chatRef.push({
           user: userId,
           text: messageText
         });
