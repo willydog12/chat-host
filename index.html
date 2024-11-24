@@ -83,16 +83,18 @@
       const data = snapshot.val();
       users = Object.values(data || {}).filter(user => user !== userId);  // Exclude current user from the list
 
-      // Automatically switch to the first available user if no current partner
-      if (!currentPartner && users.length > 0) {
-        switchConversation(users[0]);
-      }
+      // Check for active users
+      const activeUsers = users.filter(user => user !== null); // Only include users who are connected
 
-      // Handle user status display
-      if (users.length === 0) {
+      if (activeUsers.length === 0) {
         userStatus.textContent = "Waiting for other users to join...";
       } else {
         userStatus.textContent = "Ready to chat!";
+      }
+
+      // Automatically switch to the first available user if no current partner
+      if (!currentPartner && activeUsers.length > 0) {
+        switchConversation(activeUsers[0]);
       }
     });
 
@@ -147,9 +149,12 @@
 
     // Handle switching to the next person
     nextBtn.addEventListener('click', () => {
-      if (users.length > 0) {
-        const nextIndex = (users.indexOf(currentPartner) + 1) % users.length;
-        switchConversation(users[nextIndex]);
+      // Filter active users (exclude disconnected ones)
+      const activeUsers = users.filter(user => user !== userId && user !== null);
+
+      if (activeUsers.length > 0) {
+        const nextIndex = (activeUsers.indexOf(currentPartner) + 1) % activeUsers.length;
+        switchConversation(activeUsers[nextIndex]);
       } else {
         alert('No other users are available.');
       }
