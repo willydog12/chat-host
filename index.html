@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Firebase Chat</title>
+  <title>1-on-1 Chat</title>
 </head>
 <body>
 
@@ -12,11 +12,10 @@
   <input type="text" id="chatInput" placeholder="Type a message">
   <button id="sendBtn">Send</button>
 
-  <!-- Firebase SDKs and Chat Script -->
   <script type="module">
     // Import necessary functions from Firebase SDKs
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-    import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js"; 
+    import { getDatabase, ref, push, onChildAdded, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js"; 
 
     // Your Firebase configuration
     const firebaseConfig = {
@@ -33,18 +32,23 @@
     // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const database = getDatabase(app); // Get the Firebase database reference
-    const chatRef = ref(database, 'chat'); // Firebase reference for storing messages
 
-    // Unique user ID
+    // Unique user ID (e.g., using a random number or session ID)
     let userId = `User-${Math.floor(Math.random() * 1000)}`;
+
+    // Conversation partner's ID (can be set dynamically)
+    let partnerId = prompt("Enter partner's user ID:");
+
+    // Firebase reference for this conversation
+    const conversationRef = ref(database, `conversations/${userId}_${partnerId}`);
 
     // Get DOM elements
     const messagesDiv = document.getElementById('messages');
     const chatInput = document.getElementById('chatInput');
     const sendBtn = document.getElementById('sendBtn');
 
-    // Listen for new messages in Firebase and display them
-    onChildAdded(chatRef, (snapshot) => {
+    // Listen for new messages in the conversation and display them
+    onChildAdded(conversationRef, (snapshot) => {
       const messageData = snapshot.val();
       const messageDiv = document.createElement('div');
       messageDiv.textContent = `${messageData.user}: ${messageData.text}`;
@@ -58,10 +62,11 @@
     sendBtn.addEventListener('click', () => {
       const messageText = chatInput.value.trim();
       if (messageText) {
-        // Push the new message to Firebase Realtime Database
-        push(chatRef, {
+        // Push the new message to the conversation
+        push(conversationRef, {
           user: userId,
-          text: messageText
+          text: messageText,
+          timestamp: Date.now()
         });
         chatInput.value = ''; // Clear input field
       }
